@@ -33,6 +33,7 @@ dependencies = [
     "pymodbus>=3.5.0",
     "click>=8.0",
     "rich>=13.0",
+    "textual>=0.50.0",
 ]
 
 [project.urls]
