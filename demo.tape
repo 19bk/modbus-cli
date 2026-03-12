@@ -16,6 +16,11 @@ Type "cd /Users/bernard/dev/modbus-cli && source .venv/bin/activate"
 Enter
 Sleep 1s
 
+# Start simulator in background (hidden from demo)
+Type "python3 simulator.py &>/dev/null &"
+Enter
+Sleep 2s
+
 # Show the new readable banner
 Type "modbus"
 Enter
