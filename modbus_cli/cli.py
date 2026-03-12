@@ -1,5 +1,6 @@
 """modbus-cli: Like curl, but for Modbus."""
 
+import json
 import sys
 import time
 
@@ -130,8 +131,9 @@ def cli(ctx):
 @click.option("--format", "-f", "fmt",
               type=click.Choice(["decimal", "hex", "bin", "signed"]),
               default="decimal", help="Output format (default: decimal).")
+@click.option("--json", "json_output", is_flag=True, help="Output as JSON.")
 @click.option("--timeout", default=3.0, help="Timeout in seconds (default: 3).")
-def read(host, address, port, serial, baudrate, slave, count, reg_type, fmt, timeout):
+def read(host, address, port, serial, baudrate, slave, count, reg_type, fmt, json_output, timeout):
     """Read Modbus registers.
 
     \b
@@ -147,6 +149,35 @@ def read(host, address, port, serial, baudrate, slave, count, reg_type, fmt, tim
         detected_type, raw_address = _parse_address(address)
 
     target = serial or f"{host}:{port}"
+
+    if json_output:
+        client = _make_client(host, port, serial, baudrate, slave, timeout)
+        try:
+            resp = _read_registers(client, detected_type, raw_address, count, slave)
+        finally:
+            client.close()
+
+        if detected_type in ("coil", "discrete"):
+            values = resp.bits[:count]
+        else:
+            values = resp.registers
+
+        registers = []
+        for i, val in enumerate(values):
+            addr_display = address + i if not reg_type else raw_address + i
+            int_val = int(val)
+            formatted = _format_value(int_val, fmt) if not isinstance(val, bool) else str(int_val)
+            registers.append({"address": addr_display, "raw": int_val, "value": formatted})
+
+        click.echo(json.dumps({
+            "host": host,
+            "target": target,
+            "type": detected_type,
+            "slave": slave,
+            "registers": registers,
+        }))
+        return
+
     console.print()
 
     with console.status(f"[#00d4aa]  Connecting to {target}...[/]", spinner="dots"):
@@ -282,8 +313,9 @@ def write(host, address, values, port, serial, baudrate, slave, reg_type, timeou
 @click.option("--range", "-r", "scan_range", default="1-247",
               help="Slave ID range (default: 1-247).")
 @click.option("--register", default=40001, help="Test register (default: 40001).")
+@click.option("--json", "json_output", is_flag=True, help="Output as JSON.")
 @click.option("--timeout", default=0.5, help="Per-device timeout (default: 0.5).")
-def scan(host, port, serial, baudrate, scan_range, register, timeout):
+def scan(host, port, serial, baudrate, scan_range, register, json_output, timeout):
     """Scan for active Modbus devices on the bus.
 
     \b
@@ -299,6 +331,45 @@ def scan(host, port, serial, baudrate, scan_range, register, timeout):
     reg_type, raw_address = _parse_address(register)
     target = serial or f"{host}:{port}"
     found = []
+
+    if json_output:
+        for slave_id in range(start, end + 1):
+            try:
+                if serial:
+                    client = ModbusSerialClient(
+                        port=serial,
+                        baudrate=baudrate,
+                        timeout=timeout,
+                        parity="N",
+                        stopbits=1,
+                        bytesize=8,
+                    )
+                else:
+                    client = ModbusTcpClient(host=host, port=port, timeout=timeout)
+
+                if not client.connect():
+                    continue
+
+                resp = _read_registers(client, reg_type, raw_address, 1, slave_id, silent=True)
+                if resp is not None:
+                    val = resp.bits[0] if reg_type in ("coil", "discrete") else resp.registers[0]
+                    found.append({"slave": slave_id, "value": int(val)})
+                client.close()
+            except Exception:
+                try:
+                    client.close()
+                except Exception:
+                    pass
+
+        click.echo(json.dumps({
+            "host": host,
+            "target": target,
+            "register": register,
+            "type": reg_type,
+            "range": {"start": start, "end": end},
+            "devices": found,
+        }))
+        return
 
     console.print()
 
@@ -451,8 +522,9 @@ def watch(host, address, port, serial, baudrate, slave, count, reg_type, interva
               type=click.Choice(["decimal", "hex", "bin", "signed"]),
               default="decimal", help="Output format (default: decimal).")
 @click.option("--csv", "csv_out", default=None, help="Export to CSV file.")
+@click.option("--json", "json_output", is_flag=True, help="Output as JSON.")
 @click.option("--timeout", default=3.0, help="Timeout in seconds (default: 3).")
-def dump(host, start_address, end_address, port, serial, baudrate, slave, reg_type, fmt, csv_out, timeout):
+def dump(host, start_address, end_address, port, serial, baudrate, slave, reg_type, fmt, csv_out, json_output, timeout):
     """Dump a range of registers to table or CSV.
 
     \b
@@ -518,6 +590,24 @@ def dump(host, start_address, end_address, port, serial, baudrate, slave, reg_ty
                 addr = start_address + i
                 writer.writerow([addr, val, _format_value(val, fmt)])
         success_panel(f"Exported {len(all_values)} registers to [bold]{csv_out}[/]")
+    elif json_output:
+        registers = []
+        for i, val in enumerate(all_values):
+            addr = start_address + i
+            registers.append({
+                "address": addr,
+                "raw": int(val),
+                "value": _format_value(val, fmt),
+            })
+        click.echo(json.dumps({
+            "host": host,
+            "target": target,
+            "type": detected_start,
+            "slave": slave,
+            "start_address": start_address,
+            "end_address": end_address,
+            "registers": registers,
+        }))
     else:
         table = Table(
             show_header=True,
