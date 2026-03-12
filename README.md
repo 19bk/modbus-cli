@@ -65,6 +65,16 @@ pip install modbus-cli
 
 Requires Python 3.8+. No binary dependencies. Works on Linux, macOS, and Windows.
 
+### Docker
+
+```bash
+# Build local image
+docker build -t 19bk/modbus-cli .
+
+# Run a command inside the container
+docker run --rm 19bk/modbus-cli read 192.168.1.10 40001 -c 10
+```
+
 ## Commands
 
 ### `modbus read` -- Read registers
