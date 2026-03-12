@@ -26,6 +26,7 @@ pip install modbus-cli
 - **Multiple formats** -- decimal, hex, binary, signed 16-bit
 - **Progress bars** -- animated scan and dump with real-time feedback
 - **CSV export** -- dump register maps straight to file
+- **JSON output** -- pipe read/scan/dump output into jq and automation tools
 
 ## Quick Start
 
@@ -87,6 +88,9 @@ modbus read --serial /dev/ttyUSB0 40001 --slave 2 --baudrate 19200
 
 # Signed 16-bit values
 modbus read 192.168.1.10 40001 -c 5 -f signed
+
+# JSON output for scripting
+modbus read 192.168.1.10 40001 -c 5 --json | jq '.registers[].value'
 ```
 
 Output includes styled panels, connection status, and visual value bars showing register magnitude at a glance.
@@ -117,6 +121,9 @@ modbus scan 192.168.1.10 --range 1-10
 
 # Scan serial bus
 modbus scan --serial /dev/ttyUSB0 --range 1-50
+
+# JSON output
+modbus scan 192.168.1.10 --range 1-10 --json
 ```
 
 Devices are reported as they're found, with a progress bar showing scan completion.
@@ -158,6 +165,9 @@ modbus dump 192.168.1.10 40001 40200 --csv registers.csv
 
 # Dump in hex format
 modbus dump 192.168.1.10 40001 40200 -f hex
+
+# Dump as JSON
+modbus dump 192.168.1.10 40001 40020 --json
 ```
 
 Reads in chunks of 125 registers (Modbus protocol max). Shows an animated progress bar for large ranges.
