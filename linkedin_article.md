@@ -1,4 +1,14 @@
-I built curl for Modbus, and here's why
+TITLE: I built curl for Modbus
+COVER IMAGE: linkedin_screenshot.png
+
+INSTRUCTIONS:
+- Paste everything below the === line into LinkedIn's article editor
+- Select each section heading line and click H2 in the toolbar
+- Select each command block and click the <> code button in the toolbar
+- Select "github.com/19bk/modbus-cli" at the bottom and hyperlink it to https://github.com/19bk/modbus-cli
+- Bold the lead-ins marked [BOLD] below, then delete the [BOLD] tags
+
+===
 
 I spent three years as a Device Lifecycle Engineer at KOKO Networks, managing 2,500 IoT fuel dispensing kiosks across Kenya and Rwanda. Every kiosk had Modbus sensors: flow meters measuring ethanol dispensed, level sensors tracking tank volumes, temperature probes watching for overheating. All of them talking RS485 Modbus RTU or TCP back to our systems.
 
@@ -32,7 +42,12 @@ The watch dashboard
 
 The read/write/scan commands are useful. The watch mode is where it gets interesting.
 
-I built a full-screen terminal dashboard using Textual, the Python TUI framework from the team behind Rich. It gives you a live data table that updates every poll cycle, sparkline history per register showing the last 60 samples, change detection with deltas between polls, and a stats bar tracking poll count and timing.
+I built a full-screen terminal dashboard using Textual, the Python TUI framework from the team behind Rich. It gives you:
+
+- A live data table that updates every poll cycle
+- Sparkline history per register showing the last 60 samples
+- Change detection with deltas between polls
+- A stats bar tracking poll count and timing
 
 Press f to cycle through decimal, hex, binary, and signed formats. Press p to pause. Press r to reset.
 
@@ -40,11 +55,11 @@ This is the feature that would have saved me hours at KOKO. When a flow meter st
 
 Design decisions that came from real fieldwork
 
-TCP and serial RTU in the same tool. Our kiosks used TCP gateways at some sites and direct RS485 at others. I didn't want two different tools or two different mental models. Just add --serial /dev/ttyUSB0 and it switches to RTU mode. Same commands, same output.
+[BOLD]TCP and serial RTU in the same tool.[BOLD] Our kiosks used TCP gateways at some sites and direct RS485 at others. I didn't want two different tools or two different mental models. Just add --serial /dev/ttyUSB0 and it switches to RTU mode. Same commands, same output.
 
-Styled terminal output with progress bars. This is not cosmetic. When you're scanning through 247 possible slave IDs on a bus, you want to see devices discovered as they appear, not wait thirty seconds for a wall of text at the end. The animated progress bar and live discovery output make that possible.
+[BOLD]Styled terminal output with progress bars.[BOLD] This is not cosmetic. When you're scanning through 247 possible slave IDs on a bus, you want to see devices discovered as they appear, not wait thirty seconds for a wall of text at the end. The animated progress bar and live discovery output make that possible.
 
-CSV and JSON export. modbus dump reads registers in chunks of 125 (the Modbus protocol maximum per request) with a progress bar, and writes everything to a file. Add --json to any command and pipe it into jq or feed it into whatever automation you have. One of the first community contributions was adding this JSON output, which tells me other people needed it too.
+[BOLD]CSV and JSON export.[BOLD] modbus dump reads registers in chunks of 125 (the Modbus protocol maximum per request) with a progress bar, and writes everything to a file. Add --json to any command and pipe it into jq or feed it into whatever automation you have. One of the first community contributions was adding this JSON output, which tells me other people needed it too.
 
 What happened when I open-sourced it
 
@@ -67,11 +82,11 @@ The drifting values make the watch dashboard sparklines actually move, which is 
 
 What I'm building next
 
-Register map files, so you can do modbus read --map device.yaml and see "temperature" and "pressure" instead of "40001" and "40005". Anyone who has stared at a register map PDF while cross-referencing hex addresses knows why this matters.
+[BOLD]Register map files[BOLD], so you can do modbus read --map device.yaml and see "temperature" and "pressure" instead of "40001" and "40005". Anyone who has stared at a register map PDF while cross-referencing hex addresses knows why this matters.
 
-32-bit float decoding across register pairs, with configurable byte and word order. Different manufacturers do this differently, which is one of those things nobody warns you about until you're reading garbage values at 2am.
+[BOLD]32-bit float decoding[BOLD] across register pairs, with configurable byte and word order. Different manufacturers do this differently, which is one of those things nobody warns you about until you're reading garbage values at 2am.
 
-Modbus ASCII protocol support, for the older equipment that still uses it.
+[BOLD]Modbus ASCII protocol support[BOLD], for the older equipment that still uses it.
 
 If you work with Modbus devices, PLCs, SCADA systems, or any kind of industrial sensor network, give it a try. Feature requests and PRs are welcome.
 
