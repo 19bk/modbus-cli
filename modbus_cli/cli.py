@@ -87,6 +87,22 @@ def _format_value(value, fmt):
     return str(value)
 
 
+def _decode_floats(registers, byte_order="BE", word_order="BE"):
+    """Decode pairs of 16-bit registers as 32-bit IEEE 754 floats."""
+    import struct
+    results = []
+    it = iter(registers)
+    for hi, lo in zip(it, it):
+        if word_order == "LE":
+            hi, lo = lo, hi
+        raw = (hi << 16) | lo
+        b = raw.to_bytes(4, byteorder="big")
+        if byte_order == "LE":
+            b = bytes(reversed(b))
+        results.append(struct.unpack(">f", b)[0])
+    return results
+
+
 # ---------------------------------------------------------------------------
 # CLI
 # ---------------------------------------------------------------------------
@@ -133,7 +149,10 @@ def cli(ctx):
               default="decimal", help="Output format (default: decimal).")
 @click.option("--json", "json_output", is_flag=True, help="Output as JSON.")
 @click.option("--timeout", default=3.0, help="Timeout in seconds (default: 3).")
-def read(host, address, port, serial, baudrate, slave, count, reg_type, fmt, json_output, timeout):
+@click.option("--float", "as_float", is_flag=True, default=False, help="Decode register pairs as 32-bit IEEE 754 floats.")
+@click.option("--byte-order", default="BE", type=click.Choice(["BE", "LE"]), help="Byte order for float decoding (default: BE).")
+@click.option("--word-order", default="BE", type=click.Choice(["BE", "LE"]), help="Word order for float decoding (default: BE).")
+def read(host, address, port, serial, baudrate, slave, count, reg_type, fmt, json_output, timeout, as_float, byte_order, word_order):
     """Read Modbus registers.
 
     \b
@@ -195,6 +214,20 @@ def read(host, address, port, serial, baudrate, slave, count, reg_type, fmt, jso
         values = resp.bits[:count]
     else:
         values = resp.registers
+
+    if as_float:
+        if len(values) % 2 != 0:
+            error_panel("--float requires an even number of registers (pairs)")
+            sys.exit(1)
+        floats = _decode_floats(list(values), byte_order=byte_order, word_order=word_order)
+        ftable = Table(show_header=True, header_style="bold #00d4aa", border_style="#636e72", row_styles=["", "dim"])
+        ftable.add_column("Address", style="bold #7c6ff7", justify="right", min_width=8)
+        ftable.add_column("Float Value", style="bold #00d4aa", justify="right", min_width=14)
+        for i, fval in enumerate(floats):
+            ftable.add_row(str(address + i * 2), f"{fval:.6g}")
+        console.print(Panel(ftable, border_style="#636e72", title="[bold #00d4aa]32-bit floats[/]", subtitle=f"[dim]{len(floats)} float(s) from {target}[/]", padding=(1, 2)))
+        console.print()
+        return
 
     table = Table(
         show_header=True,
