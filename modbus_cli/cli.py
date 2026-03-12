@@ -2,6 +2,7 @@
 
 import sys
 import time
+import struct
 
 import click
 from pymodbus.client import ModbusTcpClient, ModbusSerialClient
@@ -86,6 +87,27 @@ def _format_value(value, fmt):
     return str(value)
 
 
+def _decode_float32_pair(words, byte_order="BE", word_order="BE"):
+    """Decode 2x16-bit Modbus words into one IEEE-754 float32 value."""
+    if len(words) != 2:
+        raise ValueError("Float decoding requires exactly two 16-bit words")
+
+    ordered_words = list(words)
+    if word_order == "LE":
+        ordered_words.reverse()
+
+    data = bytearray()
+    for word in ordered_words:
+        hi = (word >> 8) & 0xFF
+        lo = word & 0xFF
+        if byte_order == "BE":
+            data.extend((hi, lo))
+        else:
+            data.extend((lo, hi))
+
+    return struct.unpack(">f", bytes(data))[0]
+
+
 # ---------------------------------------------------------------------------
 # CLI
 # ---------------------------------------------------------------------------
@@ -130,8 +152,16 @@ def cli(ctx):
 @click.option("--format", "-f", "fmt",
               type=click.Choice(["decimal", "hex", "bin", "signed"]),
               default="decimal", help="Output format (default: decimal).")
+@click.option("--float", "decode_float", is_flag=True,
+              help="Decode register pairs as 32-bit IEEE 754 floats.")
+@click.option("--byte-order", type=click.Choice(["BE", "LE"]),
+              default="BE", show_default=True,
+              help="Byte order within each 16-bit register for --float mode.")
+@click.option("--word-order", type=click.Choice(["BE", "LE"]),
+              default="BE", show_default=True,
+              help="Word order across each 32-bit float pair for --float mode.")
 @click.option("--timeout", default=3.0, help="Timeout in seconds (default: 3).")
-def read(host, address, port, serial, baudrate, slave, count, reg_type, fmt, timeout):
+def read(host, address, port, serial, baudrate, slave, count, reg_type, fmt, decode_float, byte_order, word_order, timeout):
     """Read Modbus registers.
 
     \b
@@ -164,6 +194,50 @@ def read(host, address, port, serial, baudrate, slave, count, reg_type, fmt, tim
         values = resp.bits[:count]
     else:
         values = resp.registers
+
+    if decode_float:
+        if detected_type in ("coil", "discrete"):
+            error_panel("--float is only supported for holding/input registers")
+            sys.exit(1)
+        if count % 2 != 0:
+            error_panel("--float requires an even --count (2 registers per float)")
+            sys.exit(1)
+
+        table = Table(
+            show_header=True,
+            header_style="bold #00d4aa",
+            border_style="#636e72",
+            title_style="bold #7c6ff7",
+            row_styles=["", "dim"],
+            pad_edge=True,
+            expand=False,
+        )
+        table.add_column("Address", style="bold #7c6ff7", justify="right", min_width=8)
+        table.add_column("Float", style="bold #00d4aa", justify="right", min_width=12)
+        table.add_column("Raw Words", style="#dfe6e9", justify="right", min_width=18)
+
+        for i in range(0, len(values), 2):
+            addr_display = address + i if not reg_type else raw_address + i
+            pair = [int(values[i]), int(values[i + 1])]
+            decoded = _decode_float32_pair(pair, byte_order=byte_order, word_order=word_order)
+            table.add_row(
+                str(addr_display),
+                f"{decoded:.6g}",
+                f"[{pair[0]}, {pair[1]}]",
+            )
+
+        console.print(Panel(
+            table,
+            border_style="#636e72",
+            title=f"[bold #00d4aa]{detected_type}[/] [dim]float32 decode[/]",
+            subtitle=(
+                f"[dim]{count} register(s), byte-order={byte_order}, "
+                f"word-order={word_order}, target={target}[/]"
+            ),
+            padding=(1, 2),
+        ))
+        console.print()
+        return
 
     table = Table(
         show_header=True,
