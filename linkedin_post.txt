@@ -1,0 +1,31 @@
+I spent three years debugging 2,500 IoT fuel dispensing kiosks across Kenya and Rwanda. Every one of them had Modbus sensors: flow meters, level sensors, temperature probes.
+
+When something broke at 2am (and it always broke at 2am), I had two options:
+1. Fire up QModMaster on a Windows laptop
+2. Write another throwaway Python script with pymodbus boilerplate
+
+Both are terrible when you're SSH'd into a headless Linux gateway in the field.
+
+So I built modbus-cli. It's curl for Modbus.
+
+pip install modbus-cli
+
+One command to read registers, write values, or scan an entire bus. No GUI, no config files.
+
+modbus read 192.168.1.10 40001 --count 10
+modbus scan 192.168.1.10 --range 1-10
+modbus watch 192.168.1.10 40001 --count 8
+
+The watch mode gives you a full-screen terminal dashboard with sparkline history per register, change detection, and live stats. I built it with Textual, the TUI framework from the Rich team. This would have saved me hours at KOKO Networks when a flow meter started drifting and I needed to watch raw values over time.
+
+It auto-detects register types from standard Modbus addressing. Type 40001 and it knows you want a holding register. Type 30001 and it reads input registers. No flags needed.
+
+TCP and serial RTU in the same tool. Just add --serial /dev/ttyUSB0.
+
+The repo already has its first contributors. Someone added Docker support and another added JSON output, both within the first week.
+
+If you work with Modbus devices and want a feature, open an issue. PRs welcome.
+
+github.com/19bk/modbus-cli
+
+#Modbus #IoT #Python #OpenSource #CLI #IndustrialAutomation #SCADA #PLC #Embedded

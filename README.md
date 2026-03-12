@@ -12,7 +12,7 @@
 A dead-simple command-line tool for reading and writing Modbus TCP and RTU registers. Beautiful terminal UI. No GUI, no config files, no bloat.
 
 ```bash
-pip install modbus-cli
+pip install modbus-curl
 ```
 
 ![modbus-cli demo](demo.gif)
@@ -61,7 +61,7 @@ Neither works well when you're SSH'd into a headless gateway, debugging a PLC at
 ## Install
 
 ```bash
-pip install modbus-cli
+pip install modbus-curl
 ```
 
 Requires Python 3.8+. No binary dependencies. Works on Linux, macOS, and Windows.

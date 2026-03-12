@@ -3,7 +3,7 @@ requires = ["setuptools>=68.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "modbus-cli"
+name = "modbus-curl"
 version = "0.1.0"
 description = "A dead-simple CLI for reading and writing Modbus registers. Like curl, but for Modbus."
 readme = "README.md"
