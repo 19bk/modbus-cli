@@ -15,8 +15,7 @@ A dead-simple command-line tool for reading and writing Modbus TCP and RTU regis
 pip install modbus-cli
 ```
 
-<!-- TODO: Replace with actual terminal recording -->
-<!-- ![demo](docs/demo.gif) -->
+![modbus-cli demo](demo.gif)
 
 ## Features
 
